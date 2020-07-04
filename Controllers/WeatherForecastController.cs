@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 
@@ -24,6 +24,7 @@ namespace FileUploadService.Controllers
         }
 
         [HttpGet]
+        [EnableCors("AllowOrigin")]
         public IEnumerable<WeatherForecast> Get()
         {
             var rng = new Random();

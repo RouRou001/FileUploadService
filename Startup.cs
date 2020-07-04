@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 
 namespace FileUploadService
 {
@@ -21,7 +20,8 @@ namespace FileUploadService
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddCors(c => {
+            services.AddCors(c =>
+            {
                 c.AddPolicy("AllowOrigin", options => options.AllowAnyOrigin());
             });
 
@@ -40,7 +40,7 @@ namespace FileUploadService
 
             app.UseRouting();
 
-            app.UseCors(options => options.WithOrigins("https://localhost:5001"));
+            app.UseCors(options => options.WithOrigins("https://localhost:5001", "https://192.168.0.175:8100"));
 
             app.UseAuthorization();
 
