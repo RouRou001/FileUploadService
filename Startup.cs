@@ -1,8 +1,12 @@
+using System;
+using FileUploadService.Controllers;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Net.Http.Headers;
 
 namespace FileUploadService
 {
@@ -22,8 +26,30 @@ namespace FileUploadService
         {
             services.AddCors(c =>
             {
-                c.AddPolicy("AllowOrigin", options => options.AllowAnyOrigin());
+                c.AddPolicy("AllowOrigin", options =>
+                    options.AllowAnyOrigin()
+                    .WithHeaders(HeaderNames.AccessControlRequestHeaders, "requestverificationtoken")
+                );
             });
+
+            services.Configure<FormOptions>(options => {
+                // Set the limit to 256 MB
+                options.MultipartBodyLengthLimit = 268435456;
+            });
+
+            services.AddRazorPages()
+                .AddRazorPagesOptions(options =>
+                    {
+                        options.Conventions
+                            .AddPageApplicationModelConvention("/home",
+                                model =>
+                                {
+                                    model.Filters.Add(
+                                        new GenerateAntiforgeryTokenCookieAttribute());
+                                    model.Filters.Add(
+                                        new DisableFormValueModelBindingAttribute());
+                                });
+                    });
 
             services.AddControllers();
         }
@@ -40,7 +66,7 @@ namespace FileUploadService
 
             app.UseRouting();
 
-            app.UseCors(options => options.WithOrigins("https://localhost:5001", "https://192.168.0.175:8100"));
+            app.UseCors(options => options.WithOrigins("https://localhost:5001", "http://localhost:8100", "https://192.168.0.175:8100"));
 
             app.UseAuthorization();
 

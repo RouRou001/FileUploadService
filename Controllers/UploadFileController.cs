@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using FileUploadService.Utilities;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -11,29 +12,48 @@ namespace FileUploadService.Controllers
 {
     [ApiController]
     [Route("[controller]")]
-    public class FileUploadController : ControllerBase
+    public class FileUploadBufferController : ControllerBase
     {
-
-        [DisableCors]
         [HttpPost]
         [EnableCors("AllowOrigin")]
-        public async Task<IActionResult> OnPostUploadAsync(List<IFormFile> files)
+        public async Task<IActionResult> OnPostUploadAsyncBuffer(List<IFormFile> files)
         {
+            string storeDestination = "AzureBlobs";
+            string container = "all-files";
+
+            DateTime now = DateTime.Now;
+            string nowAsString = now.ToString("yyyy-MM-dd hh-mm-ss");
+
             long size = files.Sum(f => f.Length);
 
-            foreach (var formFile in files)
+            foreach (IFormFile formFile in files)
             {
                 if (formFile.Length > 0)
                 {
-                    Console.WriteLine("CurrentDirectory in Main: {0}", System.IO.Directory.GetCurrentDirectory());
-                    var filePath = Path.Combine("StoredFiles",
-                        Path.GetRandomFileName());
-
-                    filePath = System.IO.Directory.GetCurrentDirectory() + "\\" + filePath;
-
-                    using (var stream = System.IO.File.Create(filePath))
+                    if(FileValidator.validateFile(formFile) == false)
                     {
-                        await formFile.CopyToAsync(stream);
+                        return BadRequest(new { message = "Invalid File" });
+                    }
+
+
+                    string fileName = nowAsString + " " + formFile.FileName;
+                    if (storeDestination == "local")
+                    {
+                        var filePath = Path.Combine("StoredFiles", fileName);
+                        filePath = System.IO.Directory.GetCurrentDirectory() + "\\" + filePath;
+
+                        using (var stream = System.IO.File.Create(filePath))
+                        {
+                            await formFile.CopyToAsync(stream);
+                        }
+                    }
+                    else if (storeDestination == "AzureBlobs")
+                    {
+                        using (Stream stream = formFile.OpenReadStream())
+                        {
+                            BlobsHelpers blobsHelper = new BlobsHelpers();
+                            await blobsHelper.uploadFile(container, fileName, stream);
+                        }
                     }
                 }
             }
