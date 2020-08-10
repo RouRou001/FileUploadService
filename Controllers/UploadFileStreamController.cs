@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Text;
 using System.Threading.Tasks;
 using FileUploadService.Utilities;
 using Microsoft.AspNetCore.Antiforgery;
@@ -26,8 +27,8 @@ namespace FileUploadService.Controllers
     {
         private readonly long _fileSizeLimit;
         private readonly ILogger<FileUploadStreamController> _logger;
-        private readonly string[] _permittedExtensions = { ".txt", ".png" };
-        private readonly string _targetFilePath;
+        private readonly string[] _permittedExtensions = { ".txt", ".png", ".pdf", ".jpg", ".mp4" };
+        private readonly string _targetFolderPath;
 
         // Get the default form options so that we can use them to set the default 
         // limits for request body data.
@@ -37,27 +38,24 @@ namespace FileUploadService.Controllers
         public FileUploadStreamController(ILogger<FileUploadStreamController> logger, IConfiguration config)
         {
             _logger = logger;
-            _fileSizeLimit = 5000000;
+            _fileSizeLimit = 7372800000000;
 
             // To save physical files to a path provided by configuration:
-            _targetFilePath = System.IO.Directory.GetCurrentDirectory() + "\\" +
-                Path.Combine("StoredFiles", Path.GetRandomFileName());
+            _targetFolderPath = System.IO.Directory.GetCurrentDirectory() + "\\" + "StoredFiles";
         }
 
         [HttpGet]
         public string Get()
         {
-            System.Console.WriteLine("DEBUG GET");
             return "ABCD";
         }
 
         [HttpPost]
+        [RequestSizeLimit(7372800000000)]
         [DisableFormValueModelBinding]
-        [ValidateAntiForgeryToken]
         [EnableCors("AllowOrigin")]
         public async Task<IActionResult> OnPostUploadAsyncStream()
         {
-            System.Console.WriteLine("DEBUG XXX stream called");
             if (!MultipartRequestHelper.IsMultipartContentType(Request.ContentType))
             {
                 ModelState.AddModelError("File",
@@ -91,9 +89,12 @@ namespace FileUploadService.Controllers
                     }
                     else
                     {
+                        DateTime now = DateTime.Now;
+                        string nowAsString = now.ToString("yyyy-MM-dd hh-mm-ss");
+
                         var trustedFileNameForDisplay = WebUtility.HtmlEncode(
                                 contentDisposition.FileName.Value);
-                        var trustedFileNameForFileStorage = Path.GetRandomFileName();
+                        var trustedFileNameForFileStorage = nowAsString + " " + trustedFileNameForDisplay;
 
                         // **WARNING!**
                         // In the following example, the file is saved without
@@ -110,18 +111,27 @@ namespace FileUploadService.Controllers
 
                         if (!ModelState.IsValid)
                         {
+                            var query = from state in ModelState.Values
+                                        from error in state.Errors
+                                        select error.ErrorMessage;
+                            var errors = query.ToArray();
+                            foreach(string error in errors)
+                            {
+                                System.Console.WriteLine(error);
+                            }
+
                             return BadRequest(ModelState);
                         }
 
                         using (var targetStream = System.IO.File.Create(
-                            Path.Combine(_targetFilePath, trustedFileNameForFileStorage)))
+                            Path.Combine(_targetFolderPath, trustedFileNameForFileStorage)))
                         {
                             await targetStream.WriteAsync(streamedFileContent);
 
                             _logger.LogInformation(
                                 "Uploaded file '{TrustedFileNameForDisplay}' saved to " +
                                 "'{TargetFilePath}' as {TrustedFileNameForFileStorage}",
-                                trustedFileNameForDisplay, _targetFilePath,
+                                trustedFileNameForDisplay, _targetFolderPath,
                                 trustedFileNameForFileStorage);
                         }
                     }
@@ -131,30 +141,29 @@ namespace FileUploadService.Controllers
                 // read the headers for the next section.
                 section = await reader.ReadNextSectionAsync();
             }
-
             return Created(nameof(FileUploadStreamController), null);
         }
     }
 
-    public class GenerateAntiforgeryTokenCookieAttribute : ResultFilterAttribute
-    {
-        public override void OnResultExecuting(ResultExecutingContext context)
-        {
-            IAntiforgery antiforgery = (IAntiforgery)context.HttpContext.RequestServices.GetService(typeof(IAntiforgery));
+    // public class GenerateAntiforgeryTokenCookieAttribute : ResultFilterAttribute
+    // {
+    //     public override void OnResultExecuting(ResultExecutingContext context)
+    //     {
+    //         IAntiforgery antiforgery = (IAntiforgery)context.HttpContext.RequestServices.GetService(typeof(IAntiforgery));
 
-            // Send the request token as a JavaScript-readable cookie
-            var tokens = antiforgery.GetAndStoreTokens(context.HttpContext);
+    //         // Send the request token as a JavaScript-readable cookie
+    //         var tokens = antiforgery.GetAndStoreTokens(context.HttpContext);
 
-            context.HttpContext.Response.Cookies.Append(
-                "RequestVerificationToken",
-                tokens.RequestToken,
-                new CookieOptions() { HttpOnly = false });
-        }
+    //         context.HttpContext.Response.Cookies.Append(
+    //             "RequestVerificationToken",
+    //             tokens.RequestToken,
+    //             new CookieOptions() { HttpOnly = false });
+    //     }
 
-        public override void OnResultExecuted(ResultExecutedContext context)
-        {
-        }
-    }
+    //     public override void OnResultExecuted(ResultExecutedContext context)
+    //     {
+    //     }
+    // }
 
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method)]
     public class DisableFormValueModelBindingAttribute : Attribute, IResourceFilter

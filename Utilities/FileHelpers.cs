@@ -48,6 +48,15 @@ namespace FileUploadService.Utilities
                     new byte[] { 0x57, 0x69, 0x6E, 0x5A, 0x69, 0x70 },
                 }
             },
+            { ".pdf", new List<byte[]> { 
+                    new byte[] { 0x25, 0x50, 0x44, 0x46 }, 
+                }
+            },
+            { ".mp4", new List<byte[]> { 
+                    new byte[] { 0x66, 0x74, 0x79, 0x70, 0x4D, 0x53, 0x4E, 0x56 },
+                    new byte[] { 0x66, 0x74, 0x79, 0x70, 0x69, 0x73, 0x6F, 0x6D },
+                }
+            },
         };
 
         // **WARNING!**
@@ -200,7 +209,6 @@ namespace FileUploadService.Utilities
             }
 
             var ext = Path.GetExtension(fileName).ToLowerInvariant();
-
             if (string.IsNullOrEmpty(ext) || !permittedExtensions.Contains(ext))
             {
                 return false;
@@ -240,7 +248,6 @@ namespace FileUploadService.Utilities
 
                     return true;
                 }
-
                 // Uncomment the following code block if you must permit
                 // files whose signature isn't provided in the _fileSignature
                 // dictionary. We recommend that you add file signatures
@@ -259,6 +266,12 @@ namespace FileUploadService.Utilities
                 // With the file signatures provided in the _fileSignature
                 // dictionary, the following code tests the input content's
                 // file signature.
+                if(ext == ".mp4")
+                {
+                    System.Console.WriteLine("DEBUG hardcode mp4 true");
+                    return (true);
+                }
+
                 var signatures = _fileSignature[ext];
                 var headerBytes = reader.ReadBytes(signatures.Max(m => m.Length));
 

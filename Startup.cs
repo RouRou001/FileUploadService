@@ -37,20 +37,6 @@ namespace FileUploadService
                 options.MultipartBodyLengthLimit = 268435456;
             });
 
-            services.AddRazorPages()
-                .AddRazorPagesOptions(options =>
-                    {
-                        options.Conventions
-                            .AddPageApplicationModelConvention("/home",
-                                model =>
-                                {
-                                    model.Filters.Add(
-                                        new GenerateAntiforgeryTokenCookieAttribute());
-                                    model.Filters.Add(
-                                        new DisableFormValueModelBindingAttribute());
-                                });
-                    });
-
             services.AddControllers();
         }
 
