@@ -1,14 +1,18 @@
 using System;
 using System.Net;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FileUploadService.Controllers;
+using FileUploadService.Utilities;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.Net.Http.Headers;
 using tusdotnet;
 using tusdotnet.Interfaces;
@@ -47,6 +51,30 @@ namespace FileUploadService
             });
 
             services.AddControllers();
+
+            // services.AddAuthorization(config =>
+            // {
+            //     config.AddPolicy(Policies.Admin, Policies.AdminPolicy());
+            //     config.AddPolicy(Policies.User, Policies.UserPolicy());
+            // });
+
+            // services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+            //     .AddJwtBearer(options =>
+            //     {
+            //         options.RequireHttpsMetadata = false;
+            //         options.SaveToken = true;
+            //         options.TokenValidationParameters = new TokenValidationParameters
+            //         {
+            //             ValidateIssuer = true,
+            //             ValidateAudience = true,
+            //             ValidateLifetime = true,
+            //             ValidateIssuerSigningKey = true,
+            //             ValidIssuer = Configuration["Jwt: Issuer"],
+            //             ValidAudience = Configuration["Jwt: Audience"],
+            //             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Configuration["Jwt: SecretKey"])),
+            //             ClockSkew = TimeSpan.Zero
+            //         };
+            //     });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -73,6 +101,8 @@ namespace FileUploadService
 
             app.UseAuthorization();
 
+            app.UseAuthentication();
+
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
@@ -88,19 +118,20 @@ namespace FileUploadService
                 {
                     OnAuthorizeAsync = eventContext =>
                     {
-                        if (!eventContext.HttpContext.User.Identity.IsAuthenticated)
-                        {
-                            System.Console.WriteLine("DEBUG XXX 2");
-                            eventContext.FailRequest(HttpStatusCode.Unauthorized);
-                            return Task.CompletedTask;
-                        }
+                        // if (!eventContext.HttpContext.User.Identity.IsAuthenticated)
+                        // {
+                        //     System.Console.WriteLine("DEBUG XXX 2");
+                        //     eventContext.FailRequest(HttpStatusCode.Unauthorized);
+                        //     return Task.CompletedTask;
+                        // }
 
                         // Do other verification on the user; claims, roles, etc. In this case, check the username.
-                        if (eventContext.HttpContext.User.Identity.Name != "test")
-                        {
-                            eventContext.FailRequest(HttpStatusCode.Forbidden, "'test' is the only allowed user");
-                            return Task.CompletedTask;
-                        }
+                        // if (eventContext.HttpContext.User.Identity.Name != "test")
+                        // {
+                        //     System.Console.WriteLine("DEBUG XXX 3 Identity name = " + eventContext.HttpContext.User.Identity.Name);
+                        //     eventContext.FailRequest(HttpStatusCode.Forbidden, "'test' is the only allowed user");
+                        //     return Task.CompletedTask;
+                        // }
 
                         // Verify different things depending on the intent of the request.
                         // E.g.:
@@ -141,11 +172,12 @@ namespace FileUploadService
                         // A normal use case here would be to read the file and do some processing on it.
                         ITusFile file = await eventContext.GetFileAsync();
                         var result = await DoSomeProcessing(file, eventContext.CancellationToken);
-                        System.Console.WriteLine("Tus File upload complete YEah");
+                        System.Console.WriteLine("Tus File upload complete YEah l " + file.Id);
 
                         async Task<string> DoSomeProcessing(ITusFile file, CancellationToken eventContext)
                         {
-                            System.Console.WriteLine("Tus File upload complete YEah");
+                            System.Console.WriteLine();
+                            System.Console.WriteLine("Tus File upload complete YEah :" + file.Id);
                             return ("success");
                         }
 
